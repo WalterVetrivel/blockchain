@@ -33,10 +33,7 @@ def add_transaction(recipient, sender=owner, amount=1.0):
 
 
 def hash_block(block):
-    hashed_block = ''
-    for key in block:
-        value = block[key]
-        hashed_block = hashed_block + str(value)
+    hashed_block = '-'.join([str(block[key]) for key in block])  # List comprehension
     return hashed_block
 
 
