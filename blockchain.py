@@ -83,6 +83,10 @@ def hash_block(block):
     return hashed_block
 
 
+def check_transactions():
+    return all([verify_transaction(transaction) for transaction in open_transactions])
+
+
 def mine_block():
     """ Adds a new block to the blockchain. All open transactions are added to the block.
     A reward is given to the miner who mines a block.
@@ -95,11 +99,14 @@ def mine_block():
         'recipient': owner,
         'amount': MINING_REWARD
     }
-    open_transactions.append(reward_transaction)  # reward for miners
+    # copied_transactions = [transaction for transaction in open_transactions]
+    copied_transactions = open_transactions[:]  # copies open_transactions by value (: signifies range, if nothing is
+    # specified, then the whole list is copied
+    copied_transactions.append(reward_transaction)  # reward for miners
     block = {
         'previous_hash': hashed_block,
         'index': len(blockchain),
-        'transactions': open_transactions
+        'transactions': copied_transactions
     }
 
     blockchain.append(block)
@@ -137,6 +144,7 @@ while continue_loop:
     print('2. Mine new block')
     print('3. Print blockchain')
     print('4. Show participants')
+    print('5. Check transactions')
     print('100. Manipulate chain')
     print('0. Exit')
 
@@ -157,6 +165,11 @@ while continue_loop:
         print_blockchain()
     elif choice == 4:
         print(participants)
+    elif choice == 5:
+        if check_transactions():
+            print('All transactions are valid.')
+        else:
+            print('There are invalid transactions.')
     elif choice == 100:
         if len(blockchain) > 0:
             blockchain[0]['amount'] = 50
