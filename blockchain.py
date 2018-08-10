@@ -21,8 +21,15 @@ def get_last_blockchain_value():
 
 
 def get_balance(participant):
+    """ Returns the balance of the participant (difference between total amount received and total amount sent)
+    Open transactions are checked only for amount sent.
+    Arguments:
+         :participant: The participant whose balance needs to be checked
+    """
     # List comprehension with if
     tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender'] == participant] for block in blockchain]
+    open_tx_sender = [tx['amount'] for tx in open_transactions if tx['sender'] == participant]
+    tx_sender.append(open_tx_sender)
     amount_sent = 0
     for tx in tx_sender:
         for amount in tx:
@@ -35,6 +42,18 @@ def get_balance(participant):
             amount_received += amount
 
     return amount_received - amount_sent
+
+
+def verify_transaction(transaction):
+    """ Check whether the sender has enough balance to send the the amount.
+    Arguments:
+        :transaction: The transaction that must be verified
+    """
+
+    sender_balance = get_balance(transaction['sender'])
+    if sender_balance >= transaction['amount']:
+        return True
+    return False
 
 
 def add_transaction(recipient, sender=owner, amount=1.0):
@@ -51,9 +70,12 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         'amount': amount
     }
 
-    open_transactions.append(transaction)
-    participants.add(sender)
-    participants.add(recipient)
+    if verify_transaction(transaction):
+        open_transactions.append(transaction)
+        participants.add(sender)
+        participants.add(recipient)
+        return True
+    return False
 
 
 def hash_block(block):
@@ -62,6 +84,10 @@ def hash_block(block):
 
 
 def mine_block():
+    """ Adds a new block to the blockchain. All open transactions are added to the block.
+    A reward is given to the miner who mines a block.
+    Returns True if successful, and this is used to close all open transactions."""
+
     last_block = blockchain[-1]
     hashed_block = hash_block(last_block)
     reward_transaction = {
@@ -119,7 +145,10 @@ while continue_loop:
     if choice == 1:
         tx_data = get_transaction_value()
         recipient, amount = tx_data
-        add_transaction(recipient=recipient, amount=amount)
+        if add_transaction(recipient=recipient, amount=amount):
+            print('Added transaction.')
+        else:
+            print('Transaction failed.')
         print(open_transactions)
     elif choice == 2:
         if mine_block():
@@ -140,4 +169,4 @@ while continue_loop:
         print('Chain is invalid')
         break
 
-    print(get_balance(owner))
+    print('Balance: ' + str(get_balance(owner)))
