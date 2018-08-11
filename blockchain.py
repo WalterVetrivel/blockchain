@@ -1,3 +1,5 @@
+import functools
+
 MINING_REWARD = 10  # constant with reward for miners
 
 #  Initializing the blockchain
@@ -30,16 +32,27 @@ def get_balance(participant):
     tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender'] == participant] for block in blockchain]
     open_tx_sender = [tx['amount'] for tx in open_transactions if tx['sender'] == participant]
     tx_sender.append(open_tx_sender)
-    amount_sent = 0
-    for tx in tx_sender:
-        for amount in tx:
-            amount_sent += amount
 
-    tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient'] == participant] for block in blockchain]
-    amount_received = 0
-    for tx in tx_recipient:
-        for amount in tx:
-            amount_received += amount
+    amount_sent = functools.reduce(
+        lambda tx_sum, tx_amount: tx_sum + (tx_amount[0] if len(tx_amount) > 0 else 0), tx_sender, 0
+    )
+
+    # amount_sent = 0
+    # for tx in tx_sender:
+    #     for amount in tx:
+    #         amount_sent += amount
+
+    tx_recipient = [[tx['amount'] for tx in block['transactions']
+                     if tx['recipient'] == participant]
+                    for block in blockchain]
+
+    amount_received = functools.reduce(
+        lambda tx_sum, tx_amount: tx_sum + (tx_amount[0] if len(tx_amount) > 0 else 0), tx_recipient, 0
+    )
+    # amount_received = 0
+    # for tx in tx_recipient:
+    #     for amount in tx:
+    #         amount_received += amount
 
     return amount_received - amount_sent
 
@@ -182,4 +195,7 @@ while continue_loop:
         print('Chain is invalid')
         break
 
-    print('Balance: ' + str(get_balance(owner)))
+    # print('Balance: ' + str(get_balance(owner)))
+    print('Balance of {} is {:6.2f}'.format(owner, get_balance(owner)))
+else:
+    print('Goodbye')

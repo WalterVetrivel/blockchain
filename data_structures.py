@@ -24,3 +24,12 @@ elif any([el > 0 for el in list_1]):
     print('One or more elements are greater than 0')
 else:
     print('No element is greater than 0')
+
+
+def unlimited_arguments(*args):
+    print(args)
+    for arg in args:
+        print(arg)
+
+
+unlimited_arguments(1, 2, 3, 4, 5)
