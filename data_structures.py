@@ -33,3 +33,16 @@ def unlimited_arguments(*args):
 
 
 unlimited_arguments(1, 2, 3, 4, 5)
+unlimited_arguments(*['a', 'b', 'c'])  # * unpacks list to comma separated arguments
+
+
+def keyword_arguments(**keyword_args):  # ** converts named parameters to dictionary
+    print(keyword_args)
+    for argument in keyword_args:
+        print(argument)
+    for key, value in keyword_args.items():
+        print(key + ':' + str(value))
+
+
+keyword_arguments(name='Walter', age=24)
+# keyword_arguments('a', 'b') This results in an error. If ** is used, named arguments must be specified
