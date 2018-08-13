@@ -72,12 +72,6 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         :recipient: The recipient of the coins.
         :amount: The amount of coins sent with the transaction (default=1.0)
     """
-    # transaction = {
-    #     'sender': sender,
-    #     'recipient': recipient,
-    #     'amount': amount
-    # }
-
     # we are using OrderedDict to get an ordered dictionary so that the hash doesn't change due to the order changing
     transaction = OrderedDict([('sender', sender), ('recipient', recipient), ('amount', amount)])
 
@@ -124,12 +118,6 @@ def mine_block():
     hashed_block = hash_block(last_block)
 
     proof = proof_of_work()
-
-    # reward_transaction = {
-    #     'sender': 'MINING',
-    #     'recipient': owner,
-    #     'amount': MINING_REWARD
-    # }
 
     # we are using OrderedDict to get an ordered dictionary so that the hash doesn't change due to the order changing
     reward_transaction = OrderedDict([('sender', 'MINING'), ('recipient', owner), ('amount', MINING_REWARD)])
