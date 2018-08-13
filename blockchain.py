@@ -1,7 +1,7 @@
 import functools
-import hashlib
-import json
 from collections import OrderedDict
+
+import hash_util
 
 MINING_REWARD = 10  # constant with reward for miners
 
@@ -83,22 +83,15 @@ def add_transaction(recipient, sender=owner, amount=1.0):
     return False
 
 
-def hash_block(block):
-    # hashlib.sha256() returns a byte hash that needs to be converted to printable characters using hexdigest()
-    # json.dumps(block).encode() converts block to string
-    # sort_keys=True is needed because dictionaries are unordered and if order changes, hash changes
-    return hashlib.sha256(json.dumps(block, sort_keys=True).encode()).hexdigest()
-
-
 def valid_proof(transactions, last_hash, proof):
     guess = (str(transactions) + str(last_hash) + str(proof)).encode()
-    guess_hash = hashlib.sha256(guess).hexdigest()
+    guess_hash = hash_util.hash_string_256(guess)
     return guess_hash[0:2] == '00'  # If generated hash has two leading 0's, it is valid. The condition can be changed.
 
 
 def proof_of_work():
     last_block = blockchain[-1]
-    last_hash = hash_block(last_block)
+    last_hash = hash_util.hash_block(last_block)
     proof = 0
     while not valid_proof(open_transactions, last_hash, proof):
         proof += 1
@@ -115,7 +108,7 @@ def mine_block():
     Returns True if successful, and this is used to close all open transactions."""
 
     last_block = blockchain[-1]
-    hashed_block = hash_block(last_block)
+    hashed_block = hash_util.hash_block(last_block)
 
     proof = proof_of_work()
 
@@ -149,7 +142,7 @@ def verify_chain():
     for (index, block) in enumerate(blockchain):
         if index == 0:
             continue
-        if block['previous_hash'] != hash_block(blockchain[index - 1]):
+        if block['previous_hash'] != hash_util.hash_block(blockchain[index - 1]):
             is_valid = False
             break
         if not valid_proof(block['transactions'][:-1], block['previous_hash'], block['proof']):
