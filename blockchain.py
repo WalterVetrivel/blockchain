@@ -1,4 +1,7 @@
 import functools
+import hashlib
+import json
+from collections import OrderedDict
 
 MINING_REWARD = 10  # constant with reward for miners
 
@@ -6,7 +9,8 @@ MINING_REWARD = 10  # constant with reward for miners
 genesis_block = {
         'previous_hash': '',
         'index': 0,
-        'transactions': []
+        'transactions': [],
+        'proof': 100
     }
 blockchain = [genesis_block]
 
@@ -37,11 +41,6 @@ def get_balance(participant):
         lambda tx_sum, tx_amount: tx_sum + (sum(tx_amount) if len(tx_amount) > 0 else 0), tx_sender, 0
     )  # sum returns sum of all values in the list
 
-    # amount_sent = 0
-    # for tx in tx_sender:
-    #     for amount in tx:
-    #         amount_sent += amount
-
     tx_recipient = [[tx['amount'] for tx in block['transactions']
                      if tx['recipient'] == participant]
                     for block in blockchain]
@@ -49,10 +48,6 @@ def get_balance(participant):
     amount_received = functools.reduce(
         lambda tx_sum, tx_amount: tx_sum + (sum(tx_amount) if len(tx_amount) > 0 else 0), tx_recipient, 0
     )
-    # amount_received = 0
-    # for tx in tx_recipient:
-    #     for amount in tx:
-    #         amount_received += amount
 
     return amount_received - amount_sent
 
@@ -77,11 +72,14 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         :recipient: The recipient of the coins.
         :amount: The amount of coins sent with the transaction (default=1.0)
     """
-    transaction = {
-        'sender': sender,
-        'recipient': recipient,
-        'amount': amount
-    }
+    # transaction = {
+    #     'sender': sender,
+    #     'recipient': recipient,
+    #     'amount': amount
+    # }
+
+    # we are using OrderedDict to get an ordered dictionary so that the hash doesn't change due to the order changing
+    transaction = OrderedDict([('sender', sender), ('recipient', recipient), ('amount', amount)])
 
     if verify_transaction(transaction):
         open_transactions.append(transaction)
@@ -92,8 +90,25 @@ def add_transaction(recipient, sender=owner, amount=1.0):
 
 
 def hash_block(block):
-    hashed_block = '-'.join([str(block[key]) for key in block])  # List comprehension
-    return hashed_block
+    # hashlib.sha256() returns a byte hash that needs to be converted to printable characters using hexdigest()
+    # json.dumps(block).encode() converts block to string
+    # sort_keys=True is needed because dictionaries are unordered and if order changes, hash changes
+    return hashlib.sha256(json.dumps(block, sort_keys=True).encode()).hexdigest()
+
+
+def valid_proof(transactions, last_hash, proof):
+    guess = (str(transactions) + str(last_hash) + str(proof)).encode()
+    guess_hash = hashlib.sha256(guess).hexdigest()
+    return guess_hash[0:2] == '00'  # If generated hash has two leading 0's, it is valid. The condition can be changed.
+
+
+def proof_of_work():
+    last_block = blockchain[-1]
+    last_hash = hash_block(last_block)
+    proof = 0
+    while not valid_proof(open_transactions, last_hash, proof):
+        proof += 1
+    return proof
 
 
 def check_transactions():
@@ -107,11 +122,18 @@ def mine_block():
 
     last_block = blockchain[-1]
     hashed_block = hash_block(last_block)
-    reward_transaction = {
-        'sender': 'MINING',
-        'recipient': owner,
-        'amount': MINING_REWARD
-    }
+
+    proof = proof_of_work()
+
+    # reward_transaction = {
+    #     'sender': 'MINING',
+    #     'recipient': owner,
+    #     'amount': MINING_REWARD
+    # }
+
+    # we are using OrderedDict to get an ordered dictionary so that the hash doesn't change due to the order changing
+    reward_transaction = OrderedDict([('sender', 'MINING'), ('recipient', owner), ('amount', MINING_REWARD)])
+
     # copied_transactions = [transaction for transaction in open_transactions]
     copied_transactions = open_transactions[:]  # copies open_transactions by value (: signifies range, if nothing is
     # specified, then the whole list is copied
@@ -119,7 +141,8 @@ def mine_block():
     block = {
         'previous_hash': hashed_block,
         'index': len(blockchain),
-        'transactions': copied_transactions
+        'transactions': copied_transactions,
+        'proof': proof
     }
 
     blockchain.append(block)
@@ -139,6 +162,9 @@ def verify_chain():
         if index == 0:
             continue
         if block['previous_hash'] != hash_block(blockchain[index - 1]):
+            is_valid = False
+            break
+        if not valid_proof(block['transactions'][:-1], block['previous_hash'], block['proof']):
             is_valid = False
             break
 
