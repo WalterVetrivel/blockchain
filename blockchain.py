@@ -1,6 +1,7 @@
 import functools
 from collections import OrderedDict
 import json
+import pickle
 
 import hash_util
 
@@ -20,38 +21,60 @@ owner = 'Walter'
 participants = {'Walter'}
 
 
-def load_data():
-    with open('blockchain.txt', mode='r') as f:
-        file_content = f.readlines()
+# def load_data():
+#     with open('blockchain.txt', mode='r') as f:
+#         file_content = f.readlines()
+#         global blockchain
+#         global open_transactions
+#         blockchain = json.loads(file_content[0][:-1])  # the :-1 is used to exclude the \n character at the end
+#         # We need to convert the transactions & open transactions to OrderedDict to get correct hash values
+#         blockchain = [
+#             {
+#                 'previous_hash': block['previous_hash'],
+#                 'index': block['index'],
+#                 'proof': block['proof'],
+#                 'transactions': [OrderedDict([('sender', tx['sender']),
+#                                               ('recipient', tx['recipient']),
+#                                               ('amount', tx['amount'])])
+#                                  for tx in block['transactions']]
+#             } for block in blockchain]
+#         open_transactions = json.loads(file_content[1])
+#         open_transactions = [OrderedDict([('sender', tx['sender']),
+#                                           ('recipient', tx['recipient']),
+#                                           ('amount', tx['amount'])])
+#                              for tx in open_transactions]
+#
+#
+# load_data()
+#
+#
+# def save_data():
+#     with open('blockchain.txt', mode='w') as f:
+#         f.write(json.dumps(blockchain))
+#         f.write('\n')
+#         f.write(json.dumps(open_transactions))
+
+
+def load_data_pickle():
+    with open('blockchain.p', mode='rb') as f:  # rb to read binary file
+        file_content = pickle.loads(f.read())
         global blockchain
         global open_transactions
-        blockchain = json.loads(file_content[0][:-1])  # the :-1 is used to exclude the \n character at the end
-        # We need to convert the transactions & open transactions to OrderedDict to get correct hash values
-        blockchain = [
-            {
-                'previous_hash': block['previous_hash'],
-                'index': block['index'],
-                'proof': block['proof'],
-                'transactions': [OrderedDict([('sender', tx['sender']),
-                                              ('recipient', tx['recipient']),
-                                              ('amount', tx['amount'])])
-                                 for tx in block['transactions']]
-            } for block in blockchain]
-        open_transactions = json.loads(file_content[1])
-        open_transactions = [OrderedDict([('sender', tx['sender']),
-                                          ('recipient', tx['recipient']),
-                                          ('amount', tx['amount'])])
-                             for tx in open_transactions]
+        # pickle preserves the OrderedDict structure and is more convenient than json
+        blockchain = file_content['chain']
+        open_transactions = file_content['open_transactions']
 
 
-load_data()
+load_data_pickle()
 
 
-def save_data():
-    with open('blockchain.txt', mode='w') as f:
-        f.write(json.dumps(blockchain))
-        f.write('\n')
-        f.write(json.dumps(open_transactions))
+def save_data_pickle():
+    with open('blockchain.p', mode='wb') as f:  # wb to write binary data
+        save_data = {
+            'chain': blockchain,
+            'open_transactions': open_transactions
+        }
+        f.write(pickle.dumps(save_data))
 
 
 def get_last_blockchain_value():
@@ -114,7 +137,7 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         open_transactions.append(transaction)
         participants.add(sender)
         participants.add(recipient)
-        save_data()
+        save_data_pickle()
         return True
     return False
 
@@ -217,7 +240,7 @@ while continue_loop:
     elif choice == 2:
         if mine_block():
             open_transactions = []
-            save_data()
+            save_data_pickle()
     elif choice == 3:
         print_blockchain()
     elif choice == 4:
