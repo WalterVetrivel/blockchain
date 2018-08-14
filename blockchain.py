@@ -1,5 +1,6 @@
 import functools
 from collections import OrderedDict
+import json
 
 import hash_util
 
@@ -24,8 +25,23 @@ def load_data():
         file_content = f.readlines()
         global blockchain
         global open_transactions
-        blockchain = file_content[0]
-        open_transactions = file_content[1]
+        blockchain = json.loads(file_content[0][:-1])  # the :-1 is used to exclude the \n character at the end
+        # We need to convert the transactions & open transactions to OrderedDict to get correct hash values
+        blockchain = [
+            {
+                'previous_hash': block['previous_hash'],
+                'index': block['index'],
+                'proof': block['proof'],
+                'transactions': [OrderedDict([('sender', tx['sender']),
+                                              ('recipient', tx['recipient']),
+                                              ('amount', tx['amount'])])
+                                 for tx in block['transactions']]
+            } for block in blockchain]
+        open_transactions = json.loads(file_content[1])
+        open_transactions = [OrderedDict([('sender', tx['sender']),
+                                          ('recipient', tx['recipient']),
+                                          ('amount', tx['amount'])])
+                             for tx in open_transactions]
 
 
 load_data()
@@ -33,9 +49,9 @@ load_data()
 
 def save_data():
     with open('blockchain.txt', mode='w') as f:
-        f.write(str(blockchain))
+        f.write(json.dumps(blockchain))
         f.write('\n')
-        f.write(str(open_transactions))
+        f.write(json.dumps(open_transactions))
 
 
 def get_last_blockchain_value():
@@ -147,7 +163,6 @@ def mine_block():
     }
 
     blockchain.append(block)
-    save_data()
     return True
 
 
@@ -202,6 +217,7 @@ while continue_loop:
     elif choice == 2:
         if mine_block():
             open_transactions = []
+            save_data()
     elif choice == 3:
         print_blockchain()
     elif choice == 4:
