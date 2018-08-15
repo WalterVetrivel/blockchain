@@ -1,6 +1,6 @@
 import functools
 from collections import OrderedDict
-import json
+# import json
 import pickle
 
 import hash_util
@@ -8,17 +8,27 @@ import hash_util
 MINING_REWARD = 10  # constant with reward for miners
 
 #  Initializing the blockchain
-genesis_block = {
+blockchain = []
+open_transactions = []
+owner = 'Walter'
+participants = {'Walter'}
+
+
+def initialize_blockchain():
+    global genesis_block
+    global blockchain
+    global open_transactions
+
+    #  Initializing the blockchain
+    genesis_block = {
         'previous_hash': '',
         'index': 0,
         'transactions': [],
         'proof': 100
     }
-blockchain = [genesis_block]
+    blockchain = [genesis_block]
 
-open_transactions = []
-owner = 'Walter'
-participants = {'Walter'}
+    open_transactions = []
 
 
 # def load_data():
@@ -56,25 +66,31 @@ participants = {'Walter'}
 
 
 def load_data_pickle():
-    with open('blockchain.p', mode='rb') as f:  # rb to read binary file
-        file_content = pickle.loads(f.read())
-        global blockchain
-        global open_transactions
-        # pickle preserves the OrderedDict structure and is more convenient than json
-        blockchain = file_content['chain']
-        open_transactions = file_content['open_transactions']
+    global blockchain
+    global open_transactions
+    try:
+        with open('blockchain.p', mode='rb') as f:  # rb to read binary file
+            file_content = pickle.loads(f.read())
+            # pickle preserves the OrderedDict structure and is more convenient than json
+            blockchain = file_content['chain']
+            open_transactions = file_content['open_transactions']
+    except (IOError, IndexError):
+        initialize_blockchain()
 
 
 load_data_pickle()
 
 
 def save_data_pickle():
-    with open('blockchain.p', mode='wb') as f:  # wb to write binary data
-        save_data = {
-            'chain': blockchain,
-            'open_transactions': open_transactions
-        }
-        f.write(pickle.dumps(save_data))
+    try:
+        with open('blockchain.p', mode='wb') as f:  # wb to write binary data
+            save_data = {
+                'chain': blockchain,
+                'open_transactions': open_transactions
+            }
+            f.write(pickle.dumps(save_data))
+    except IOError:
+        print('Saving failed')
 
 
 def get_last_blockchain_value():
