@@ -1,9 +1,10 @@
 import functools
 from collections import OrderedDict
-# import json
-import pickle
+import json
+# import pickle
 
 import hash_util
+from block import Block
 
 MINING_REWARD = 10  # constant with reward for miners
 
@@ -20,77 +21,97 @@ def initialize_blockchain():
     global open_transactions
 
     #  Initializing the blockchain
-    genesis_block = {
-        'previous_hash': '',
-        'index': 0,
-        'transactions': [],
-        'proof': 100
-    }
+    # genesis_block = {
+    #     'previous_hash': '',
+    #     'index': 0,
+    #     'transactions': [],
+    #     'proof': 100
+    # }
+    genesis_block = Block(0, '', [], 100, 0)
     blockchain = [genesis_block]
 
     open_transactions = []
 
 
-# def load_data():
-#     with open('blockchain.txt', mode='r') as f:
-#         file_content = f.readlines()
-#         global blockchain
-#         global open_transactions
-#         blockchain = json.loads(file_content[0][:-1])  # the :-1 is used to exclude the \n character at the end
-#         # We need to convert the transactions & open transactions to OrderedDict to get correct hash values
-#         blockchain = [
-#             {
-#                 'previous_hash': block['previous_hash'],
-#                 'index': block['index'],
-#                 'proof': block['proof'],
-#                 'transactions': [OrderedDict([('sender', tx['sender']),
-#                                               ('recipient', tx['recipient']),
-#                                               ('amount', tx['amount'])])
-#                                  for tx in block['transactions']]
-#             } for block in blockchain]
-#         open_transactions = json.loads(file_content[1])
-#         open_transactions = [OrderedDict([('sender', tx['sender']),
-#                                           ('recipient', tx['recipient']),
-#                                           ('amount', tx['amount'])])
-#                              for tx in open_transactions]
-#
-#
-# load_data()
-#
-#
-# def save_data():
-#     with open('blockchain.txt', mode='w') as f:
-#         f.write(json.dumps(blockchain))
-#         f.write('\n')
-#         f.write(json.dumps(open_transactions))
-
-
-def load_data_pickle():
-    global blockchain
-    global open_transactions
+def load_data():
     try:
-        with open('blockchain.p', mode='rb') as f:  # rb to read binary file
-            file_content = pickle.loads(f.read())
-            # pickle preserves the OrderedDict structure and is more convenient than json
-            blockchain = file_content['chain']
-            open_transactions = file_content['open_transactions']
+        with open('blockchain.txt', mode='r') as f:
+            file_content = f.readlines()
+            global blockchain
+            global open_transactions
+            blockchain = json.loads(file_content[0][:-1])  # the :-1 is used to exclude the \n character at the end
+            # We need to convert the transactions & open transactions to OrderedDict to get correct hash values
+            # blockchain = [
+            #     {
+            #         'previous_hash': block['previous_hash'],
+            #         'index': block['index'],
+            #         'proof': block['proof'],
+            #         'transactions': [OrderedDict([('sender', tx['sender']),
+            #                                       ('recipient', tx['recipient']),
+            #                                       ('amount', tx['amount'])])
+            #                          for tx in block['transactions']]
+            #     } for block in blockchain]
+
+            updated_blockchain = []
+            for block in blockchain:
+                transactions = [OrderedDict([('sender', tx['sender']),
+                                             ('recipient', tx['recipient']),
+                                             ('amount', tx['amount'])])
+                                for tx in block['transactions']]
+                updated_block = Block(block['index'], block['previous_hash'], transactions, block['proof'], block['timestamp'])
+                updated_blockchain.append(updated_block)
+
+            blockchain = updated_blockchain
+
+            open_transactions = json.loads(file_content[1])
+            open_transactions = [OrderedDict([('sender', tx['sender']),
+                                              ('recipient', tx['recipient']),
+                                              ('amount', tx['amount'])])
+                                 for tx in open_transactions]
     except (IOError, IndexError):
         initialize_blockchain()
 
 
-load_data_pickle()
+load_data()
 
 
-def save_data_pickle():
+def save_data():
     try:
-        with open('blockchain.p', mode='wb') as f:  # wb to write binary data
-            save_data = {
-                'chain': blockchain,
-                'open_transactions': open_transactions
-            }
-            f.write(pickle.dumps(save_data))
+        with open('blockchain.txt', mode='w') as f:
+            saveable_chain = [block.__dict__ for block in blockchain]
+            f.write(json.dumps(saveable_chain))
+            f.write('\n')
+            f.write(json.dumps(open_transactions))
     except IOError:
-        print('Saving failed')
+        print('Unable to save')
+
+
+# def load_data_pickle():
+#     global blockchain
+#     global open_transactions
+#     try:
+#         with open('blockchain.p', mode='rb') as f:  # rb to read binary file
+#             file_content = pickle.loads(f.read())
+#             # pickle preserves the OrderedDict structure and is more convenient than json
+#             blockchain = file_content['chain']
+#             open_transactions = file_content['open_transactions']
+#     except (IOError, IndexError):
+#         initialize_blockchain()
+#
+#
+# load_data_pickle()
+#
+#
+# def save_data_pickle():
+#     try:
+#         with open('blockchain.p', mode='wb') as f:  # wb to write binary data
+#             save_data = {
+#                 'chain': blockchain,
+#                 'open_transactions': open_transactions
+#             }
+#             f.write(pickle.dumps(save_data))
+#     except IOError:
+#         print('Saving failed')
 
 
 def get_last_blockchain_value():
@@ -107,7 +128,7 @@ def get_balance(participant):
          :participant: The participant whose balance needs to be checked
     """
     # List comprehension with if
-    tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender'] == participant] for block in blockchain]
+    tx_sender = [[tx['amount'] for tx in block.transactions if tx['sender'] == participant] for block in blockchain]
     open_tx_sender = [tx['amount'] for tx in open_transactions if tx['sender'] == participant]
     tx_sender.append(open_tx_sender)
 
@@ -115,7 +136,7 @@ def get_balance(participant):
         lambda tx_sum, tx_amount: tx_sum + (sum(tx_amount) if len(tx_amount) > 0 else 0), tx_sender, 0
     )  # sum returns sum of all values in the list
 
-    tx_recipient = [[tx['amount'] for tx in block['transactions']
+    tx_recipient = [[tx['amount'] for tx in block.transactions
                      if tx['recipient'] == participant]
                     for block in blockchain]
 
@@ -153,7 +174,7 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         open_transactions.append(transaction)
         participants.add(sender)
         participants.add(recipient)
-        save_data_pickle()
+        save_data()
         return True
     return False
 
@@ -194,13 +215,13 @@ def mine_block():
     copied_transactions = open_transactions[:]  # copies open_transactions by value (: signifies range, if nothing is
     # specified, then the whole list is copied
     copied_transactions.append(reward_transaction)  # reward for miners
-    block = {
-        'previous_hash': hashed_block,
-        'index': len(blockchain),
-        'transactions': copied_transactions,
-        'proof': proof
-    }
-
+    # block = {
+    #     'previous_hash': hashed_block,
+    #     'index': len(blockchain),
+    #     'transactions': copied_transactions,
+    #     'proof': proof
+    # }
+    block = Block(len(blockchain), hashed_block, copied_transactions, proof)
     blockchain.append(block)
     return True
 
@@ -217,10 +238,10 @@ def verify_chain():
     for (index, block) in enumerate(blockchain):
         if index == 0:
             continue
-        if block['previous_hash'] != hash_util.hash_block(blockchain[index - 1]):
+        if block.previous_hash != hash_util.hash_block(blockchain[index - 1]):
             is_valid = False
             break
-        if not valid_proof(block['transactions'][:-1], block['previous_hash'], block['proof']):
+        if not valid_proof(block.transactions[:-1], block.previous_hash, block.proof):
             is_valid = False
             break
 
@@ -240,7 +261,6 @@ while continue_loop:
     print('3. Print blockchain')
     print('4. Show participants')
     print('5. Check transactions')
-    print('100. Manipulate chain')
     print('0. Exit')
 
     choice = int(input('Enter your choice: '))
@@ -256,7 +276,7 @@ while continue_loop:
     elif choice == 2:
         if mine_block():
             open_transactions = []
-            save_data_pickle()
+            save_data()
     elif choice == 3:
         print_blockchain()
     elif choice == 4:
@@ -266,9 +286,6 @@ while continue_loop:
             print('All transactions are valid.')
         else:
             print('There are invalid transactions.')
-    elif choice == 100:
-        if len(blockchain) > 0:
-            blockchain[0]['amount'] = 50
     elif choice == 0:
         continue_loop = False
     else:
