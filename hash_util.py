@@ -12,4 +12,5 @@ def hash_block(block):
     # sort_keys=True is needed because dictionaries are unordered and if order changes, hash changes
 
     hashable_block = block.__dict__.copy()
+    hashable_block['transactions'] = [tx.to_ordered_dict() for tx in hashable_block['transactions']]
     return hash_string_256(json.dumps(hashable_block, sort_keys=True).encode())
