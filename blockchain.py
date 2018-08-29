@@ -5,6 +5,7 @@ import json
 
 import hash_util
 from block import Block
+from transaction import Transaction
 
 MINING_REWARD = 10  # constant with reward for miners
 
