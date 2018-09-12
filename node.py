@@ -40,15 +40,14 @@ class Node:
                     print('Added transaction.')
                 else:
                     print('Transaction failed.')
-                print(self.blockchain.open_transactions)
+                print(self.blockchain.get_open_transactions())
             elif choice == 2:
-                self.blockchain.mine_block()
-                self.blockchain.open_transactions = []
-                self.blockchain.save_data()
+                if self.blockchain.mine_block():
+                    self.blockchain.save_data()
             elif choice == 3:
                 self.print_blockchain()
             elif choice == 4:
-                if Verification.check_transactions(self.blockchain.open_transactions, self.blockchain.get_balance):
+                if Verification.check_transactions(self.blockchain.get_open_transactions(), self.blockchain.get_balance):
                     print('All transactions are valid.')
                 else:
                     print('There are invalid transactions.')
